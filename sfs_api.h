@@ -59,7 +59,7 @@ int sfs_fseek(int fileID, int loc);
 int sfs_remove(char *file);
 
 void init_sb();
-void init root_dir_inode();
+void init_root_dir_inode();
 void init_sfs();
 void init_inode_table();
 

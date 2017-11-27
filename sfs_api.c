@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <fuse.h>
+//#include <fuse.h>
 #include <strings.h>
 #include "disk_emu.h"
 
@@ -28,7 +28,11 @@ directory_entry dir_table[NUM_INODES-1];
 
 //initialize all bits to high
 uint8_t free_bit_map[BITMAP_ROW_SIZE] = { [0 ... BITMAP_ROW_SIZE - 1] = UINT8_MAX };
+void main(){
 
+
+    printf("Someshit");
+}
 void init_sb(){
     sb.magic = 0xACBD0005;
     sb.block_size = BLOCK_SIZE;
@@ -38,7 +42,7 @@ void init_sb(){
 
 }
 
-void init root_dir_inode(){
+void init_root_dir_inode(){
     inode_t rd;
     rd.mode = 777;
     rd.link_cnt = 1;
@@ -63,7 +67,7 @@ void init_inode_table(){
             force_set_index(i);
         }
     int j = 0;
-        for(i = (int) sb.inode_table_len +1; i <= sb.inode_table_len + NUM_DIR_BLOCKS +1; i++){
+        for(int i = (int) sb.inode_table_len +1; i <= sb.inode_table_len + NUM_DIR_BLOCKS +1; i++){
             force_set_index(i);
             inode_table[0].data_ptrs[j] = (unsigned) i;
             j++;
@@ -72,7 +76,7 @@ void init_inode_table(){
         for (int i =j; i<12; i++){
             inode_table[0].data_ptrs[j] = -1;
         }
-        inode_table[0].indirect_ptrs = -1;
+        inode_table[0].indirectPointer = -1;
     }
     
 
@@ -106,7 +110,7 @@ void mksfs(int fresh) {
         write_blocks(1, (int) sb.inode_table_len, (void*) inode_table);
 
         //Write directory table
-        write_blocks((int) sb.inode_table_len + 1, NUM_DIR_BLOCKS, (void*) directory_table);
+        write_blocks((int) sb.inode_table_len + 1, NUM_DIR_BLOCKS, (void*) dir_table);
 
     }
     else {
@@ -119,7 +123,7 @@ void mksfs(int fresh) {
         read_blocks(1, (int) sb.inode_table_len, (void*) inode_table);
 
         //Read directory_table
-        read_blocks((int) sb.inode_table_len + 1, NUM_DIR_BLOCKS, (void*) directory_table);
+        read_blocks((int) sb.inode_table_len + 1, NUM_DIR_BLOCKS, (void*) dir_table);
 
         //free block
         uint8_t* free_bit_map = get_bitmap();
