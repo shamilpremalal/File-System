@@ -70,3 +70,9 @@ void rm_index(uint32_t index) {
     FREE_BIT(free_bit_map[i], bit);
 }
 
+uint8_t* get_bitmap(void) {
+    return free_bit_map;
+}
+
+
+

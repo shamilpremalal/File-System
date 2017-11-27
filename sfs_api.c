@@ -49,7 +49,7 @@ void init root_dir_inode(){
 
 }
 
-void initsfs(){
+void init_sfs(){
     init_sb();
     init_inode_table();
     init_root_dir_inode();
@@ -81,7 +81,7 @@ void mksfs(int fresh) {
     if(fresh)
     {
     //Creates below
-    initsfs();
+    init_sfs();
 
     // force the bit for the directory table
     // and assign the data pointer in the directory i node

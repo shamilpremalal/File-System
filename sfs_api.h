@@ -57,6 +57,7 @@ int sfs_fread(int fileID, char *buf, int length);
 int sfs_fwrite(int fileID, const char *buf, int length);
 int sfs_fseek(int fileID, int loc);
 int sfs_remove(char *file);
+
 void init_sb();
 void init root_dir_inode();
 void init_sfs();
