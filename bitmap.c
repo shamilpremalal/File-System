@@ -20,7 +20,7 @@ uint8_t free_bit_map[SIZE] = { [0 ... SIZE-1] = UINT8_MAX };
     _data = _data & ~(1 << _which_bit)
 
 void force_set_index(uint32_t index) {
-    // TODO
+    // TODO -- DONE
     // Used to force indicies to used 
     // this is the opposite of rm_index. 
     

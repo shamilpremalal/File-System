@@ -5,6 +5,8 @@
 
 #define NUM_BLOCKS 1024
 
+uint8_t* get_bitmap(void);
+
 /*
  * @short force an index to be set.
  * @long Use this to setup your superblock, inode table and free bit map
@@ -26,6 +28,7 @@ uint32_t get_index();
  * @param index the index to free
  */
 void rm_index(uint32_t index);
+
 
 #endif //_INCLUDE_BITMAP_H_
 

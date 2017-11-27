@@ -5,6 +5,10 @@
 
 #define MAX_FILE_NAME 20
 #define MAX_EXTENSION_NAME 3
+#define BLOCK_SIZE 1024
+#define NUM_INODES 100 
+
+
 
 typedef struct superblock_t{
     uint64_t magic;
@@ -41,6 +45,8 @@ typedef struct directory_entry{
     char name[MAX_FILE_NAME]; // represents the name of the entery. 
 }directory_entry;
 
+//helper methods
+
 
 void mksfs(int fresh);
 int sfs_getnextfilename(char *fname);
@@ -51,5 +57,10 @@ int sfs_fread(int fileID, char *buf, int length);
 int sfs_fwrite(int fileID, const char *buf, int length);
 int sfs_fseek(int fileID, int loc);
 int sfs_remove(char *file);
+void init_sb();
+void init root_dir_inode();
+void init_sfs();
+void init_inode_table();
+
 
 #endif //_INCLUDE_SFS_API_H_
