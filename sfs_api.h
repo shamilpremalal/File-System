@@ -6,11 +6,10 @@
 #define MAX_FILE_NAME 20
 #define MAX_EXTENSION_NAME 3
 #define BLOCK_SIZE 1024
-#define NUM_INODES 100 
+#define NUM_INODES 100
 
-
-
-typedef struct superblock_t{
+typedef struct superblock_t
+{
     uint64_t magic;
     uint64_t block_size;
     uint64_t fs_size;
@@ -18,7 +17,8 @@ typedef struct superblock_t{
     uint64_t root_dir_inode;
 } superblock_t;
 
-typedef struct inode_t {
+typedef struct inode_t
+{
     unsigned int mode;
     unsigned int link_cnt;
     unsigned int uid;
@@ -33,24 +33,24 @@ typedef struct inode_t {
  * inode  pointer towards the inode in the inode table
  *rwptr    where in the file to start   
  */
-typedef struct file_descriptor {
+typedef struct file_descriptor
+{
     uint64_t inodeIndex;
-    inode_t* inode; // 
+    inode_t *inode; //
     uint64_t rwptr;
 } file_descriptor;
 
-
-typedef struct directory_entry{
-    int num; // represents the inode number of the entery. 
-    char name[MAX_FILE_NAME]; // represents the name of the entery. 
-}directory_entry;
+typedef struct directory_entry
+{
+    int num;                  // represents the inode number of the entery.
+    char name[MAX_FILE_NAME]; // represents the name of the entery.
+} directory_entry;
 
 //helper methods
 
-
 void mksfs(int fresh);
 int sfs_getnextfilename(char *fname);
-int sfs_getfilesize(const char* path);
+int sfs_getfilesize(const char *path);
 int sfs_fopen(char *name);
 int sfs_fclose(int fileID);
 int sfs_fread(int fileID, char *buf, int length);
@@ -62,6 +62,5 @@ void init_sb();
 void init_root_dir_inode();
 void init_sfs();
 void init_inode_table();
-
 
 #endif //_INCLUDE_SFS_API_H_

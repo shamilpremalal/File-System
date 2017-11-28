@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-//#include <fuse.h>
+#include <fuse.h>
 #include <strings.h>
 #include "disk_emu.h"
 
@@ -28,11 +28,7 @@ directory_entry dir_table[NUM_INODES-1];
 
 //initialize all bits to high
 uint8_t free_bit_map[BITMAP_ROW_SIZE] = { [0 ... BITMAP_ROW_SIZE - 1] = UINT8_MAX };
-void main(){
 
-
-    printf("Someshit");
-}
 void init_sb(){
     sb.magic = 0xACBD0005;
     sb.block_size = BLOCK_SIZE;
