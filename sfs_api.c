@@ -1,4 +1,3 @@
-
 #include "sfs_api.h"
 #include "bitmap.h"
 #include <stdio.h>
@@ -19,8 +18,8 @@
 #define USE_BIT(_data, _which_bit) \
     _data = _data & ~(1 << _which_bit)
 
-#define NUM_INODE_BLOCKS (sizeof(inode_t) * NUM_INODES / BLOCK_SIZE + 1) //Blocks needed for inode
-#define NUM_DIR_BLOCKS 12 //(sizeof(directory_entry) * NUM_INODES / BLOCK_SIZE + 1)
+#define NUM_INODE_BLOCKS (sizeof(inode_t) * NO_OF_INODES / BLOCK_SIZE + 1) //Blocks needed for inode
+#define NUM_DIR_BLOCKS (sizeof(directory_entry) * NO_OF_INODES / BLOCK_SIZE + 1) //number of blocks occuppied by directory 
 
 //tables
 file_descriptor fd_table[NO_OF_INODES];
@@ -72,14 +71,23 @@ void init_super()
 
 void init_root_dir_inode()
 {
-    inode_table[0].size = 12;
+    inode_table[0].size = NUM_DIR_BLOCKS;
 
-    for(int i = 0; i<12;i++){
+    int count = 0;
+    for (int i = 0; i < NUM_DIR_BLOCKS; i++)
+    {
+        inode_table[0].data_ptrs[count] = (int)sb.inode_table_len + 1 + NUM_DIR_BLOCKS + i;
 
-       inode_table[0].data_ptrs[i] = (int)sb.inode_table_len + 1 + i;
+        count++;
+    }
+
+    while (count < 12)
+    {
+        inode_table[0].data_ptrs[count] = -1;
+
+        count++;
     }
 }
-
 
 void init_inode_table()
 {
@@ -112,6 +120,7 @@ void mksfs(int fresh)
         init_fdt();
         init_int();
         init_super();
+        init_root_dir_inode();
 
         if (init_fresh_disk(PREMALAL_SHAMIL_DISK, BLOCK_SIZE, NUM_BLOCKS) == -1)
         {
@@ -128,15 +137,37 @@ void mksfs(int fresh)
         //Write inode table to 1st block of disk, write sb.inode_table_len blocks
         write_blocks(1, (int)sb.inode_table_len, (void *)inode_table);
 
+        //set inode table in bitmap
+        for (int i = 1; i <= sb.inode_table_len; i++)
+        {
+            force_set_index(i);
+        }
+
         //Write directory table
         write_blocks((int)sb.inode_table_len + 1, NUM_DIR_BLOCKS, (void *)dir_table);
+
+        for (int i = sb.inode_table_len+1; i <= sb.inode_table_len+1+ NUM_DIR_BLOCKS; i++)
+        {
+            force_set_index(i);
+        }
+
+        //initialize fd_table[0] to inode_table[0]
+        *(fd_table[0].inode) = inode_table[0];
+        fd_table[0].inodeIndex = 0;
+        fd_table[0].rwptr = 0;
+
+        //occupy bitmap as last block
+        force_set_index(NUM_BLOCKS - 1);
+        
+        //write bitmap
+        write_blocks(NUM_BLOCKS - 1, 1, (void *)free_bit_map);
     }
     else
     {
 
         init_fdt();
 
-        init_disk(PREMALAL_SHAMIL_DISK,BLOCK_SIZE,NUM_BLOCKS);
+        init_disk(PREMALAL_SHAMIL_DISK, BLOCK_SIZE, NUM_BLOCKS);
         //Read superblock of 0th block of disk, one block
         read_blocks(0, 1, &sb);
 
@@ -144,7 +175,6 @@ void mksfs(int fresh)
         read_blocks(1, (int)sb.inode_table_len, (void *)inode_table);
 
         //free block
-        uint8_t *free_bit_map = get_bitmap();
         read_blocks(NUM_BLOCKS - 1, 1, (void *)free_bit_map);
     }
 }

@@ -60,7 +60,9 @@ int sfs_fwrite(int fileID, const char *buf, int length);
 int sfs_fseek(int fileID, int loc);
 int sfs_remove(char *file);
 
-void init_sb();
+void init_fdt();
+void init_int();
+void init_super();
 void init_root_dir_inode();
 void init_sfs();
 void init_inode_table();
