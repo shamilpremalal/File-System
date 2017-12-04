@@ -5,8 +5,10 @@
 
 #define MAX_FILE_NAME 20
 #define MAX_EXTENSION_NAME 3
+
 #define BLOCK_SIZE 1024
-#define NUM_INODES 100
+#define NO_OF_BLOCKS 1024
+#define NO_OF_INODES 100
 
 typedef struct superblock_t
 {
@@ -31,7 +33,7 @@ typedef struct inode_t
 /*
  * inodeIndex    which inode this entry describes
  * inode  pointer towards the inode in the inode table
- *rwptr    where in the file to start   
+ * rwptr    where in the file to start   
  */
 typedef struct file_descriptor
 {

@@ -30,6 +30,8 @@ uint32_t get_index();
 void rm_index(uint32_t index);
 
 
+
+
 #endif //_INCLUDE_BITMAP_H_
 
 

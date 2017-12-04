@@ -19,6 +19,7 @@ uint8_t free_bit_map[SIZE] = { [0 ... SIZE-1] = UINT8_MAX };
 #define USE_BIT(_data, _which_bit) \
     _data = _data & ~(1 << _which_bit)
 
+
 void force_set_index(uint32_t index) {
     // TODO -- DONE
     // Used to force indicies to used 
@@ -32,6 +33,7 @@ void force_set_index(uint32_t index) {
 
     // USE bit
     USE_BIT(free_bit_map[i], bit);
+
 }
 
 uint32_t get_index() {
