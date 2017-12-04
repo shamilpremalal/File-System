@@ -4,6 +4,8 @@
 #include <stdint.h>
 
 #define NUM_BLOCKS 1024
+#define SIZE (NUM_BLOCKS/8) //128
+
 
 uint8_t* get_bitmap(void);
 

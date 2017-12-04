@@ -1,3 +1,4 @@
+
 #include "sfs_api.h"
 #include "bitmap.h"
 #include <stdio.h>
@@ -9,17 +10,17 @@
 
 #define PREMALAL_SHAMIL_DISK "sfs_disk.disk"
 #define NUM_BLOCKS 1024                  //maximum number of data blocks on the disk.
-#define BITMAP_ROW_SIZE (NUM_BLOCKS / 8) // this essentially mimcs the number of rows we have in the bitmap. \
-                                         //Will have 128 rows.
-                                         /* macros */
+#define BITMAP_ROW_SIZE (NUM_BLOCKS / 8) /* this essentially mimcs the number of rows we have in the bitmap. \
+                                         Will have 128 rows*/
+/* macros */
 #define FREE_BIT(_data, _which_bit) \
     _data = _data | (1 << _which_bit)
 
 #define USE_BIT(_data, _which_bit) \
     _data = _data & ~(1 << _which_bit)
 
-#define NUM_INODE_BLOCKS (sizeof(inode_t) * NO_OF_INODES / BLOCK_SIZE + 1) //Blocks needed for inode
-#define NUM_DIR_BLOCKS (sizeof(directory_entry) * NO_OF_INODES / BLOCK_SIZE + 1) //number of blocks occuppied by directory 
+#define NUM_INODE_BLOCKS (sizeof(inode_t) * NO_OF_INODES / BLOCK_SIZE + 1)       //Blocks needed for inode
+#define NUM_DIR_BLOCKS (sizeof(directory_entry) * NO_OF_INODES / BLOCK_SIZE + 1) //number of blocks occuppied by directory
 
 //tables
 file_descriptor fd_table[NO_OF_INODES];
@@ -27,9 +28,6 @@ directory_entry dir_table[NO_OF_INODES];
 inode_t inode_table[NO_OF_INODES]; //Array of inodes
 
 superblock_t sb;
-
-//initialize all bits to high
-uint8_t free_bit_map[BITMAP_ROW_SIZE] = {[0 ... BITMAP_ROW_SIZE - 1] = UINT8_MAX};
 
 void init_fdt()
 {
@@ -146,7 +144,7 @@ void mksfs(int fresh)
         //Write directory table
         write_blocks((int)sb.inode_table_len + 1, NUM_DIR_BLOCKS, (void *)dir_table);
 
-        for (int i = sb.inode_table_len+1; i <= sb.inode_table_len+1+ NUM_DIR_BLOCKS; i++)
+        for (int i = sb.inode_table_len + 1; i <= sb.inode_table_len + 1 + NUM_DIR_BLOCKS; i++)
         {
             force_set_index(i);
         }
@@ -158,9 +156,10 @@ void mksfs(int fresh)
 
         //occupy bitmap as last block
         force_set_index(NUM_BLOCKS - 1);
-        
+
         //write bitmap
-        write_blocks(NUM_BLOCKS - 1, 1, (void *)free_bit_map);
+        uint8_t *bit_map = get_bitmap();
+        write_blocks(NUM_BLOCKS - 1, 1, (void *)bit_map);
     }
     else
     {
@@ -175,7 +174,8 @@ void mksfs(int fresh)
         read_blocks(1, (int)sb.inode_table_len, (void *)inode_table);
 
         //free block
-        read_blocks(NUM_BLOCKS - 1, 1, (void *)free_bit_map);
+        uint8_t *bit_map = get_bitmap();
+        read_blocks(NUM_BLOCKS - 1, 1, (void *)bit_map);
     }
 }
 int sfs_getnextfilename(char *fname)

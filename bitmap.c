@@ -6,12 +6,9 @@
 
 /* constants */
 // how far to loop in array
-#define SIZE (NUM_BLOCKS/8) //128
 
 /* globals */
-// the actual data. initialize all bits to high
 uint8_t free_bit_map[SIZE] = { [0 ... SIZE-1] = UINT8_MAX };
-
 /* macros */
 #define FREE_BIT(_data, _which_bit) \
     _data = _data | (1 << _which_bit)
