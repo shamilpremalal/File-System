@@ -1,13 +1,14 @@
 #ifndef _INCLUDE_BITMAP_H_
 #define _INCLUDE_BITMAP_H_
 
+#include "sfs_api.h"
 #include <stdint.h>
 
 #define NUM_BLOCKS 1024
+
+/* constants */
+// how far to loop in array
 #define SIZE (NUM_BLOCKS/8) //128
-
-
-uint8_t* get_bitmap(void);
 
 /*
  * @short force an index to be set.
@@ -31,8 +32,7 @@ uint32_t get_index();
  */
 void rm_index(uint32_t index);
 
-
-
+uint8_t* get_bitmap(void);
 
 #endif //_INCLUDE_BITMAP_H_
 

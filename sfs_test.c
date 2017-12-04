@@ -77,6 +77,7 @@ main(int argc, char **argv)
 
   /* First we open two files and attempt to write data to them.
    */
+  
   for (i = 0; i < 2; i++) {
     names[i] = rand_name();
     fds[i] = sfs_fopen(names[i]);

@@ -1,13 +1,13 @@
 // free bitmap for OS file systems assignment
 
 #include "bitmap.h"
-
 #include <strings.h>    // for `ffs`
+#include <stdio.h>
+#include <stdlib.h>
 
-/* constants */
-// how far to loop in array
 
 /* globals */
+// the actual data. initialize all bits to high
 uint8_t free_bit_map[SIZE] = { [0 ... SIZE-1] = UINT8_MAX };
 /* macros */
 #define FREE_BIT(_data, _which_bit) \
