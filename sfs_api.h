@@ -38,7 +38,7 @@ typedef struct inode_t
 typedef struct file_descriptor
 {
     uint64_t inodeIndex;
-    inode_t *inode; //
+    inode_t *inode; 
     uint64_t rwptr;
     int used;
 } file_descriptor;

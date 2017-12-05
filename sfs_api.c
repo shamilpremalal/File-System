@@ -41,7 +41,7 @@ void init_fdt()
 }
 void init_int()
 {
-
+    //init inode structure
     for (int i = 0; i < NO_OF_INODES; i++)
     {
 
@@ -168,7 +168,6 @@ void mksfs(int fresh)
         uint8_t *free_bit_map = get_bitmap();
         write_blocks(NUM_BLOCKS - 1, 1, (void *)free_bit_map);
         printf("Bitmap written to disk\n");
-
     }
     else
     {
@@ -184,30 +183,108 @@ void mksfs(int fresh)
         read_blocks(0, 1, &sb);
         printf("Superblock read from disk\n");
 
-
         //Read inode table of 1st block of disk, read sb.inode_table_len blocks
         read_blocks(1, (int)(NUM_INODE_BLOCKS), (void *)inode_table);
         printf("Inode Table read from disk\n");
-
 
         //free block
         uint8_t *free_bit_map = get_bitmap();
         read_blocks(NUM_BLOCKS - 1, 1, (void *)free_bit_map);
         printf("Bitmap read from disk\n");
-
     }
     return;
 }
 int sfs_getnextfilename(char *fname)
 {
-    return 0;
+    //Must initialize int dir_table_index but why -1 and why is NO_OF_INODE-1
+
+    dir_table_index++;
+    int count = 1;
+
+    //If at the end of the table
+    if (dir_table_index == sizeof(dir_table) / sizeof(dir_table[0]))
+    {
+        dir_table_index = -1;
+        return 0;
+    }
+    //Finds next used Directory
+    while (dir_table[dir_table_index].used == 0)
+    {
+        dir_table_index++;
+        //If at end of the table
+        if (dir_table_index == sizeof(dir_table) / sizeof(dir_table[0]))
+        {
+            dir_table_index = 0;
+            return 0;
+        }
+
+        //Checked entire table
+        if (count == sizeof(dir_table) / sizeof(dir_table[0]))
+        {
+            return 0;
+        }
+        count++;
+    }
+
+    for (int i; i < strlen(dir_table[dir_table_index].name); i++)
+    {
+        fname[i] = (dir_table[dir_table_index].name)[i];
+    }
+    int i;
+    fname[i] = '\0'; //null terminator
+
+    //entries left in the directory
+    return sizeof(dir_table) / sizeof(dir_table[0]) - dir_table_index - 1;
 }
+
+//Returns Size of a file
 int sfs_getfilesize(const char *path)
 {
+    for (int i; i < sizeof(dir_table) / sizeof(dir_table[0]); i++)
+    {
+        if (dir_table[i].used == 1)
+        {
+            if (strcmp(dir_table[i].name, path) == 0)
+            {
+                return inode_table[dir_table[i].inode].size;
+            }
+        }
+    }
+
     return 0;
 }
+
 int sfs_fopen(char *name)
 {
+if(strlen(name) > MAX_FILE_NAME || strlen(name) == 0){
+    return -1;
+}
+
+//Looking for the file
+uint64_t inode_table_index = -1;
+for(int i =0; i<sizeof(dir_table)/sizeof(dir_table[0]); i++){
+    if(dir_table[i].used ==1){
+        if(strcmp(dir_table[i].name, name)==0){
+            inode_table_index = (int)dir_table[i].inode;
+        }
+    }
+}
+
+//File is not present
+if(inode_table_index ==-1){
+    //Find 1st available in inode table
+    uint64_t new_inode_table_index =0;
+    while(inode_table[new_inode_table].used==1 && new_inode_table_index < sizeof(inode_table)/sizeof(inode_table[0])){
+
+    }
+}
+
+
+
+
+
+
+
     return 0;
 }
 int sfs_fclose(int fileID)

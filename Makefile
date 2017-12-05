@@ -17,7 +17,7 @@ EXECUTABLE= 260586332_Premalal_Shamil
 all: $(SOURCES) $(HEADERS) $(EXECUTABLE)
 
 $(EXECUTABLE): $(OBJECTS)
-	gcc $(OBJECTS) $(LDFLAGS) -o $@
+	gcc $(OBJECTS) $(LDFLAGS) 
 
 .c.o:
 	gcc $(CFLAGS) $< -o $@
