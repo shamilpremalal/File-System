@@ -124,6 +124,7 @@ main(int argc, char **argv)
   printf("Two files created with zero length:\n");
 
   for (i = 0; i < 2; i++) {
+    printf("the value of i is: %i\n", i);
     for (j = 0; j < filesize[i]; j += chunksize) {
       if ((filesize[i] - j) < 10) {
         chunksize = filesize[i] - j;
@@ -147,6 +148,7 @@ main(int argc, char **argv)
       }
       free(buffer);
     }
+    printf("File name to find is: %s\n", names[i]);
     int tmp = sfs_getfilesize(names[i]);
     if (filesize[i] != tmp) {
       fprintf(stderr, "ERROR: mismatch file size %d, %d\n", filesize[i], tmp);
@@ -376,6 +378,7 @@ main(int argc, char **argv)
   int max = 0;
   while (sfs_getnextfilename(filename)) {
 	  if (strcmp(filename, names[max]) != 0) {
+  
 	  	printf("ERROR misnamed file %d: %s %s\n", max, filename, names[max]);
 		error_count++;
 	  }

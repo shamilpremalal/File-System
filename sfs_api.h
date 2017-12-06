@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#define MAX_FILE_NAME 20
+#define MAX_FILE_NAME 21 // Last bit for null termination!
 #define MAX_EXTENSION_NAME 3
 
 #define BLOCK_SIZE 1024
@@ -42,7 +42,7 @@ typedef struct inode_t
  */
 typedef struct file_descriptor
 {
-    uint64_t inodeIndex;
+    int inodeIndex;
     inode_t *inode; 
     uint64_t rwptr;
     int used;

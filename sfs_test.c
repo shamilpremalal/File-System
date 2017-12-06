@@ -79,6 +79,9 @@ main(int argc, char **argv)
    */
   for (i = 0; i < 2; i++) {
     names[i] = rand_name();
+        printf("The value of i is: %i\n", i);
+    printf("The name is: %s\n", names[i]);
+
     fds[i] = sfs_fopen(names[i]);
     if (fds[i] < 0) {
       fprintf(stderr, "ERROR: creating first test file %s\n", names[i]);

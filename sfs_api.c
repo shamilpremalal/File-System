@@ -36,7 +36,8 @@ void init_fdt()
     for (int i = 0; i < NO_OF_INODES; i++)
     {
 
-        fd_table[i].used = -1;
+        fd_table[i].used = 0;
+        fd_table[i].inodeIndex = -1;
     }
 }
 void init_int()
@@ -226,13 +227,14 @@ int sfs_getnextfilename(char *fname)
         }
         count++;
     }
-    int i = 0;
+    int i;
     for (i = 0; i < strlen(dir_table[dir_table_index].name); i++)
     {
-        fname[i] = (dir_table[dir_table_index].name)[i];
+        fname[i] = (dir_table[dir_table_index+1].name)[i];
     }
     fname[i] = '\0'; //null terminator
 
+    strcpy(fname,dir_table[dir_table_index].name);
     //entries left in the directory
     return sizeof(dir_table) / sizeof(dir_table[0]) - dir_table_index - 1;
 }
@@ -240,10 +242,11 @@ int sfs_getnextfilename(char *fname)
 //Returns Size of a file
 int sfs_getfilesize(const char *path)
 {
-    for (int i = 0; i < sizeof(dir_table) / sizeof(dir_table[0]); i++)
+    for (int i = 0; i < NO_OF_INODES; i++)
     {
         if (dir_table[i].used == 1)
         {
+            printf("dir table name is: %s \n",dir_table[i].name);
             if (strcmp(dir_table[i].name, path) == 0)
             {
                 return inode_table[dir_table[i].inode_index].size;
@@ -256,13 +259,13 @@ int sfs_getfilesize(const char *path)
 
 int sfs_fopen(char *name)
 {
-    if (strlen(name) > MAX_FILE_NAME || strlen(name) == 0)
+    if (strlen(name) > MAX_FILE_NAME - 1 || strlen(name) == 0)
     {
         return -1;
     }
 
     //Look for the file
-    uint64_t inode_index = -1;
+    int inode_index = -1;
     for (int i = 0; i < NO_OF_INODES; i++)
     {
         if (dir_table[i].used == 1)
@@ -270,15 +273,20 @@ int sfs_fopen(char *name)
             if (strcmp(dir_table[i].name, name) == 0)
             {
                 inode_index = dir_table[i].inode_index;
+                printf("File Found in dir table at index: %d\n",inode_index);
+
             }
         }
     }
 
+
     //File does not exist
     if (inode_index == -1)
     {
+        printf("File Not Found\n");
+
         //Find 1st available in inode table
-        int new_index = 0;
+        int new_index = 1;
         while (inode_table[new_index].used == 1 && new_index < NO_OF_INODES)
         {
             new_index++;
@@ -289,6 +297,9 @@ int sfs_fopen(char *name)
                 return -1;
             }
         }
+
+        printf("The inode table index found is: %i\n", new_index);
+
 
         //Find 1st available in the dir table
         int new_dir_table_index = 0;
@@ -303,15 +314,19 @@ int sfs_fopen(char *name)
             }
         }
 
+        printf("The dir table index found is: %i\n", new_dir_table_index);
+
+
         //A free index in the Inode table and the discriptor table has been found
 
         //initialize a temporary I node
         inode_t temp_inode;
-        temp_inode.mode = -1;
-        temp_inode.link_cnt = -1;
-        temp_inode.uid = -1;
-        temp_inode.gid = -1;
-        temp_inode.size = -1;
+        temp_inode.mode = 777;
+        temp_inode.link_cnt = 1;
+        temp_inode.uid = 0;
+        temp_inode.gid = 0;
+        temp_inode.size = 0;
+        temp_inode.used = 1;
 
         for (int j = 0; j < 12; j++)
         {
@@ -327,8 +342,9 @@ int sfs_fopen(char *name)
         temp_dir.used = 1;
         temp_dir.inode_index = new_index;
 
-        strcpy(temp_dir.name, name);
-
+        strncpy(temp_dir.name, name,MAX_FILE_NAME);
+        temp_dir.name[MAX_FILE_NAME] = 0;
+        
         //store temp
         dir_table[new_dir_table_index] = temp_dir;
 
@@ -339,17 +355,21 @@ int sfs_fopen(char *name)
         write_blocks((int)(NUM_INODE_BLOCKS) + 1, NUM_DIR_BLOCKS, (void *)dir_table);
 
         inode_index = new_index;
-
+    }
         // check is the file is already open
         int open_file_index;
+        printf("Value of I_node index to find is: %i\n", inode_index);
         for (open_file_index = 0; open_file_index < NO_OF_INODES; open_file_index++)
         {
             if (fd_table[open_file_index].inodeIndex == inode_index)
             {
+                 printf("The inode index stored in fd_table at %i is %i\n", open_file_index,fd_table[open_file_index].inodeIndex);
+                printf("The file des index returned is: %i\n", open_file_index);
                 return open_file_index;
             }
         }
-    }
+
+    
 
     // find a spot on the file descriptor table
     int new_fdt_index = 0;
@@ -366,6 +386,7 @@ int sfs_fopen(char *name)
     fd_table[new_fdt_index].used = 1;
     fd_table[new_fdt_index].inode = &inode_table[inode_index];
     fd_table[new_fdt_index].rwptr = inode_table[inode_index].size;
+    fd_table[new_fdt_index].inodeIndex = inode_index;
 
     return new_fdt_index;
 }
@@ -428,7 +449,7 @@ int sfs_fread(int fileID, char *buf, int length)
 
     // find in which block is the RWPTR
     uint64_t data_ptr_index = f->rwptr / BLOCK_SIZE;
-    printf("\n\n\n\n INITIAL VALUE OF DATA_PTR_INDEX %lu , NUMBER OF BLOCKS TO READ IS: %i\n\n\n", data_ptr_index,num_block_read);
+   // printf("\n\n\n\n INITIAL VALUE OF DATA_PTR_INDEX %lu , NUMBER OF BLOCKS TO READ IS: %i\n\n\n", data_ptr_index,num_block_read);
 
     /****************************************************************/
     /********************** read the blocks *************************/
@@ -451,7 +472,7 @@ int sfs_fread(int fileID, char *buf, int length)
             {
                 indirect_t *indirect_pointer = malloc(sizeof(indirect_t));
                 read_blocks(n->indirectPointer, 1, (void *)indirect_pointer);
-                printf("\n\n\n\n i is %i DATA_PTR_INDEX VALUE %lu NUMBER OF BLOCKS TO READ IS: %i\n\n\n",i, data_ptr_index,num_block_read);
+             //   printf("\n\n\n\n i is %i DATA_PTR_INDEX VALUE %lu NUMBER OF BLOCKS TO READ IS: %i\n\n\n",i, data_ptr_index,num_block_read);
                 read_blocks(indirect_pointer->data_ptr[data_ptr_index - 12], 1, buffer[i]);
             }
             else
@@ -880,8 +901,8 @@ int sfs_remove(char *file)
     // update disk
     uint8_t *free_bit_map = get_bitmap();
     write_blocks(NUM_BLOCKS - 1, 1, (void *)free_bit_map);
-    write_blocks(1, sb.inode_table_len, (void *)inode_table);
-    write_blocks(sb.inode_table_len + 1, NUM_DIR_BLOCKS, (void *)dir_table);
+    write_blocks(1,(int) (NUM_INODE_BLOCKS), (void *)inode_table);
+    write_blocks((int) (NUM_INODE_BLOCKS) + 1, NUM_DIR_BLOCKS, (void *)dir_table);
 
     return 0;
 }
