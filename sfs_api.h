@@ -4,6 +4,8 @@
 #include <stdint.h>
 
 #define MAX_FILE_NAME 21 // Last bit for null termination!
+#define MAXFILENAME 21 // Last bit for null termination!
+
 #define MAX_EXTENSION_NAME 3
 
 #define BLOCK_SIZE 1024
