@@ -1,4 +1,3 @@
-
 #include "sfs_api.h"
 #include "bitmap.h"
 #include <stdio.h>
@@ -29,6 +28,7 @@ directory_entry dir_table[NO_OF_INODES];
 inode_t inode_table[NO_OF_INODES]; //Array of inodes
 
 superblock_t sb;
+int dir_table_index = -1;
 
 void init_fdt()
 {
@@ -51,6 +51,7 @@ void init_int()
         inode_table[i].gid = -1;
         inode_table[i].size = -1;
         inode_table[i].indirectPointer = -1;
+        inode_table[i].used = -1;
 
         for (int j = 0; j < 12; j++)
         {
@@ -122,7 +123,7 @@ void mksfs(int fresh)
         init_int();
         init_super();
         init_root_dir_inode();
-        printf("All structs initialized\n");
+        printf("\nAll structs initialized\n");
         if (init_fresh_disk(PREMALAL_SHAMIL_DISK, BLOCK_SIZE, NUM_BLOCKS) == -1)
         {
             printf("Could not create new disk file");
@@ -202,7 +203,7 @@ int sfs_getnextfilename(char *fname)
     int count = 1;
 
     //If at the end of the table
-    if (dir_table_index == sizeof(dir_table) / sizeof(dir_table[0]))
+    if (dir_table_index == NO_OF_INODES)
     {
         dir_table_index = -1;
         return 0;
@@ -212,25 +213,24 @@ int sfs_getnextfilename(char *fname)
     {
         dir_table_index++;
         //If at end of the table
-        if (dir_table_index == sizeof(dir_table) / sizeof(dir_table[0]))
+        if (dir_table_index == NO_OF_INODES)
         {
             dir_table_index = 0;
             return 0;
         }
 
         //Checked entire table
-        if (count == sizeof(dir_table) / sizeof(dir_table[0]))
+        if (count == NO_OF_INODES)
         {
             return 0;
         }
         count++;
     }
-
-    for (int i; i < strlen(dir_table[dir_table_index].name); i++)
+    int i = 0;
+    for (i = 0; i < strlen(dir_table[dir_table_index].name); i++)
     {
         fname[i] = (dir_table[dir_table_index].name)[i];
     }
-    int i;
     fname[i] = '\0'; //null terminator
 
     //entries left in the directory
@@ -240,13 +240,13 @@ int sfs_getnextfilename(char *fname)
 //Returns Size of a file
 int sfs_getfilesize(const char *path)
 {
-    for (int i; i < sizeof(dir_table) / sizeof(dir_table[0]); i++)
+    for (int i = 0; i < sizeof(dir_table) / sizeof(dir_table[0]); i++)
     {
         if (dir_table[i].used == 1)
         {
             if (strcmp(dir_table[i].name, path) == 0)
             {
-                return inode_table[dir_table[i].inode].size;
+                return inode_table[dir_table[i].inode_index].size;
             }
         }
     }
@@ -256,54 +256,632 @@ int sfs_getfilesize(const char *path)
 
 int sfs_fopen(char *name)
 {
-if(strlen(name) > MAX_FILE_NAME || strlen(name) == 0){
-    return -1;
-}
+    if (strlen(name) > MAX_FILE_NAME || strlen(name) == 0)
+    {
+        return -1;
+    }
 
-//Looking for the file
-uint64_t inode_table_index = -1;
-for(int i =0; i<sizeof(dir_table)/sizeof(dir_table[0]); i++){
-    if(dir_table[i].used ==1){
-        if(strcmp(dir_table[i].name, name)==0){
-            inode_table_index = (int)dir_table[i].inode;
+    //Look for the file
+    uint64_t inode_index = -1;
+    for (int i = 0; i < NO_OF_INODES; i++)
+    {
+        if (dir_table[i].used == 1)
+        {
+            if (strcmp(dir_table[i].name, name) == 0)
+            {
+                inode_index = dir_table[i].inode_index;
+            }
         }
     }
-}
 
-//File is not present
-if(inode_table_index ==-1){
-    //Find 1st available in inode table
-    uint64_t new_inode_table_index =0;
-    while(inode_table[new_inode_table].used==1 && new_inode_table_index < sizeof(inode_table)/sizeof(inode_table[0])){
+    //File does not exist
+    if (inode_index == -1)
+    {
+        //Find 1st available in inode table
+        int new_index = 0;
+        while (inode_table[new_index].used == 1 && new_index < NO_OF_INODES)
+        {
+            new_index++;
 
+            //If the table is Full
+            if (new_index == NO_OF_INODES)
+            {
+                return -1;
+            }
+        }
+
+        //Find 1st available in the dir table
+        int new_dir_table_index = 0;
+        while (dir_table[new_dir_table_index].used == 1 && new_dir_table_index < NO_OF_INODES)
+        {
+            new_dir_table_index++;
+
+            //If the table is Full
+            if (new_dir_table_index == NO_OF_INODES)
+            {
+                return -1;
+            }
+        }
+
+        //A free index in the Inode table and the discriptor table has been found
+
+        //initialize a temporary I node
+        inode_t temp_inode;
+        temp_inode.mode = -1;
+        temp_inode.link_cnt = -1;
+        temp_inode.uid = -1;
+        temp_inode.gid = -1;
+        temp_inode.size = -1;
+
+        for (int j = 0; j < 12; j++)
+        {
+            temp_inode.data_ptrs[j] = -1;
+        }
+        temp_inode.indirectPointer = -1;
+
+        //new inode table entry
+        inode_table[new_index] = temp_inode;
+
+        //Initialize temporary directory
+        directory_entry temp_dir;
+        temp_dir.used = 1;
+        temp_dir.inode_index = new_index;
+
+        strcpy(temp_dir.name, name);
+
+        //store temp
+        dir_table[new_dir_table_index] = temp_dir;
+
+        //updating inode table
+        write_blocks(1, (int)(NUM_INODE_BLOCKS), (void *)inode_table);
+
+        //update dir_table
+        write_blocks((int)(NUM_INODE_BLOCKS) + 1, NUM_DIR_BLOCKS, (void *)dir_table);
+
+        inode_index = new_index;
+
+        // check is the file is already open
+        int open_file_index;
+        for (open_file_index = 0; open_file_index < NO_OF_INODES; open_file_index++)
+        {
+            if (fd_table[open_file_index].inodeIndex == inode_index)
+            {
+                return open_file_index;
+            }
+        }
     }
+
+    // find a spot on the file descriptor table
+    int new_fdt_index = 0;
+    while (fd_table[new_fdt_index].used == 1)
+    {
+        new_fdt_index++;
+        if (new_fdt_index == NO_OF_INODES)
+        {
+            printf("SFS > There is no more space in the file descriptor table!\n");
+            return -1;
+        }
+    }
+
+    fd_table[new_fdt_index].used = 1;
+    fd_table[new_fdt_index].inode = &inode_table[inode_index];
+    fd_table[new_fdt_index].rwptr = inode_table[inode_index].size;
+
+    return new_fdt_index;
 }
 
-
-
-
-
-
-
-    return 0;
-}
 int sfs_fclose(int fileID)
 {
+    // check if the there is a file open
+    if (fd_table[fileID].used == 0)
+    {
+        printf("SFS > The file %i was not used! \n", fileID);
+        return -1;
+    }
+
+    fd_table[fileID].used = 0;
+    fd_table[fileID].inodeIndex = -1;
+
     return 0;
 }
+
+char *appendCharToCharArray(char *array, char a, int len)
+{
+    char *ret = malloc((len + 2) * sizeof(char));
+
+    int i;
+    for (i = 0; i < len; i++)
+    {
+        ret[i] = array[i];
+    }
+    ret[len] = a;
+    ret[len + 1] = '\0';
+
+    return ret;
+}
+
 int sfs_fread(int fileID, char *buf, int length)
 {
-    return 0;
+    char *temp_buf = NULL;
+    int len_temp_buf = 0;
+
+    // make sure this is an open file
+    if (fd_table[fileID].used == 0)
+    {
+        return 0;
+    }
+
+    // the the file descriptor and the inode of the file
+    file_descriptor *f = &fd_table[fileID];
+    inode_t *n = &inode_table[f->inodeIndex];
+
+    //make sure you dont read pass the edn of file
+    if (f->rwptr + length > n->size)
+    {
+        length = n->size - f->rwptr;
+    }
+
+    // how many blocks to read
+    int num_block_read = ((f->rwptr % BLOCK_SIZE) + length) / BLOCK_SIZE + 1;
+
+    char buffer[num_block_read][BLOCK_SIZE];
+
+    // find in which block is the RWPTR
+    uint64_t data_ptr_index = f->rwptr / BLOCK_SIZE;
+    printf("\n\n\n\n INITIAL VALUE OF DATA_PTR_INDEX %lu , NUMBER OF BLOCKS TO READ IS: %i\n\n\n", data_ptr_index,num_block_read);
+
+    /****************************************************************/
+    /********************** read the blocks *************************/
+    /****************************************************************/
+    int i;
+    for (i = 0; i < num_block_read; i++)
+    {
+
+        // if the block to read is in the direct pointer
+        if (data_ptr_index < 12)
+        {
+            read_blocks(n->data_ptrs[data_ptr_index], 1, buffer[i]);
+        }
+
+        // if the block to read is in the indirect pointer
+        else
+        {
+            //if indirect pointer exist
+            if (n->indirectPointer != -1)
+            {
+                indirect_t *indirect_pointer = malloc(sizeof(indirect_t));
+                read_blocks(n->indirectPointer, 1, (void *)indirect_pointer);
+                printf("\n\n\n\n i is %i DATA_PTR_INDEX VALUE %lu NUMBER OF BLOCKS TO READ IS: %i\n\n\n",i, data_ptr_index,num_block_read);
+                read_blocks(indirect_pointer->data_ptr[data_ptr_index - 12], 1, buffer[i]);
+            }
+            else
+            {
+                printf("SFS > ERROR While reading the file");
+            }
+        }
+        data_ptr_index++;
+
+    }
+
+    /***************************************************************/
+    /******* put all the blocks in the output buffer ***************/
+    /***************************************************************/
+
+    int start_ptr = f->rwptr % BLOCK_SIZE;
+    int end_ptr = (start_ptr + length) % BLOCK_SIZE;
+
+    int j;
+
+    // one block
+    if (num_block_read == 1)
+    {
+        for (j = start_ptr; j < end_ptr; j++)
+        {
+            temp_buf = appendCharToCharArray(temp_buf, buffer[0][j], len_temp_buf);
+            len_temp_buf++;
+        }
+
+        // two blocks
+    }
+    else if (num_block_read == 2)
+    {
+        for (j = start_ptr; j < BLOCK_SIZE; j++)
+        {
+            temp_buf = appendCharToCharArray(temp_buf, buffer[0][j], len_temp_buf);
+            len_temp_buf++;
+        }
+        for (j = 0; j < end_ptr; j++)
+        {
+            temp_buf = appendCharToCharArray(temp_buf, buffer[1][j], len_temp_buf);
+            len_temp_buf++;
+        }
+
+        // more than two blocks
+    }
+    else
+    {
+        for (j = start_ptr; j < BLOCK_SIZE; j++)
+        {
+            temp_buf = appendCharToCharArray(temp_buf, buffer[0][j], len_temp_buf);
+            len_temp_buf++;
+        }
+
+        for (j = 1; j < num_block_read - 1; j++)
+        {
+            int k;
+            for (k = 0; k < BLOCK_SIZE; k++)
+            {
+                temp_buf = appendCharToCharArray(temp_buf, buffer[j][k], len_temp_buf);
+                len_temp_buf++;
+            }
+        }
+
+        for (j = 0; j < end_ptr; j++)
+        {
+            temp_buf = appendCharToCharArray(temp_buf, buffer[num_block_read - 1][j], len_temp_buf);
+            len_temp_buf++;
+        }
+    }
+
+    f->rwptr += length;
+
+    for (i = 0; i < length; i++)
+    {
+        buf[i] = temp_buf[i];
+    }
+
+    return len_temp_buf;
 }
 int sfs_fwrite(int fileID, const char *buf, int length)
 {
-    return 0;
+    int count = 0;
+    int length_left = length;
+
+    // get the file descritor and the inode of the file
+    file_descriptor *f = &fd_table[fileID];
+    inode_t *n = &inode_table[f->inodeIndex];
+
+    /****************************************************************/
+    /****************** find empty data_prt *************************/
+    /****************************************************************/
+
+    // check if there is any empty direct pointer first
+    int ptr_index = 0;
+    while (n->data_ptrs[ptr_index] != -1 && ptr_index < 12)
+    {
+        ptr_index++;
+    }
+    int ind_ptr_index = 0;
+
+    // if no direct pointer is empty check the indirect pointer
+    // if indirect pointer exist
+    if (ptr_index == 12 && n->indirectPointer != -1)
+    {
+        indirect_t *indirect_pointer = malloc(sizeof(indirect_t));
+        read_blocks(n->indirectPointer, 1, (void *)indirect_pointer);
+
+        while (indirect_pointer->data_ptr[ind_ptr_index] != -1)
+        {
+            ind_ptr_index++;
+            if (ind_ptr_index == NUM_INDIRECT)
+            {
+                return 0;
+            }
+        }
+
+        //if indirect pointer does not exist
+    }
+    else if (ptr_index == 12)
+    {
+        indirect_t *indirect_pointer = malloc(sizeof(indirect_t));
+        for (ind_ptr_index = 0; ind_ptr_index < NUM_INDIRECT; ind_ptr_index++)
+        {
+            indirect_pointer->data_ptr[ind_ptr_index] = -1;
+        }
+        n->indirectPointer = get_index();
+        write_blocks(n->indirectPointer, 1, (void *)indirect_pointer);
+        ind_ptr_index = 0;
+    }
+
+    // if the pointer is in the middle of a block
+    // you need to read this block, fill it up, and write it back
+    if (f->rwptr % BLOCK_SIZE != 0)
+    {
+
+        /*****************************************************************/
+        /********* read_buffer to complete the last used block ***********/
+        /*****************************************************************/
+
+        char *read_buf = malloc(sizeof(char) * BLOCK_SIZE);
+
+        uint64_t init_rwptr = f->rwptr;
+
+        sfs_fseek(fileID, (f->rwptr - (f->rwptr % BLOCK_SIZE)));
+
+        // read the block to which we want to append
+        sfs_fread(fileID, read_buf, (init_rwptr % BLOCK_SIZE));
+
+        int len_read_buf = (init_rwptr % BLOCK_SIZE);
+
+        // complete the first block to be written with old and new stuff
+        int i;
+
+        if (length_left > BLOCK_SIZE - (f->rwptr % BLOCK_SIZE))
+        {
+            for (i = 0; i < BLOCK_SIZE - (f->rwptr % BLOCK_SIZE); i++)
+            {
+                read_buf = appendCharToCharArray(read_buf, buf[i], len_read_buf);
+                len_read_buf++;
+                count++;
+            }
+        }
+        else
+        {
+            for (i = 0; i < length_left; i++)
+            {
+                read_buf = appendCharToCharArray(read_buf, buf[i], len_read_buf);
+                len_read_buf++;
+                count++;
+            }
+        }
+
+        /****************************************************************/
+        /****************** write the first block ***********************/
+        /****************************************************************/
+
+        // if an direct pointer was found
+        if (ptr_index < 12)
+        {
+            write_blocks(n->data_ptrs[ptr_index - 1], 1, (void *)read_buf);
+        }
+        else if (ind_ptr_index == 0)
+        {
+            write_blocks(n->data_ptrs[ptr_index - 1], 1, (void *)read_buf);
+        }
+
+        // if there was no empty direct pointer
+        else
+        {
+            if (n->indirectPointer != -1)
+            {
+                indirect_t *indirect_pointer = malloc(sizeof(indirect_t));
+                read_blocks(n->indirectPointer, 1, (void *)indirect_pointer);
+                write_blocks(indirect_pointer->data_ptr[ind_ptr_index - 1], 1, (void *)read_buf);
+            }
+        }
+
+        // update how many bit are left to right
+        length_left -= BLOCK_SIZE - (f->rwptr % BLOCK_SIZE);
+    }
+
+    /****************************************************************/
+    /************ write all the other blocks needed *****************/
+    /****************************************************************/
+
+    int k;
+    char *write_buf;
+    int len_write_buf;
+    int num_block_left;
+    if (length_left > 0)
+    {
+        num_block_left = (length_left - 1) / BLOCK_SIZE + 1;
+    }
+    else if (length_left == 1)
+    {
+        num_block_left = 1;
+    }
+    else
+    {
+        num_block_left = 0;
+    }
+
+    for (k = 0; k < num_block_left; k++)
+    {
+        write_buf = "";
+        len_write_buf = 0;
+
+        /********** if this is a middle block, ie. complete block **********/
+        if (length_left > BLOCK_SIZE)
+        {
+
+            //make the block
+            int w;
+            for (w = length - length_left; w < length - length_left + BLOCK_SIZE; w++)
+            {
+                write_buf = appendCharToCharArray(write_buf, buf[w], len_write_buf);
+                len_write_buf++;
+                count++;
+            }
+
+            //write the block
+            // direct pointer
+            if (ptr_index < 12)
+            {
+                n->data_ptrs[ptr_index] = get_index();
+                write_blocks(n->data_ptrs[ptr_index], 1, (void *)write_buf);
+                ptr_index++;
+
+                // indirect pointer
+            }
+            else
+            {
+
+                //exist
+                if (n->indirectPointer != -1)
+                {
+                    indirect_t *indirect_pointer = malloc(sizeof(indirect_t));
+                    read_blocks(n->indirectPointer, 1, (void *)indirect_pointer);
+                    indirect_pointer->data_ptr[ind_ptr_index] = get_index();
+                    write_blocks(n->indirectPointer, 1, (void *)indirect_pointer);
+                    write_blocks(indirect_pointer->data_ptr[ind_ptr_index], 1, (void *)write_buf);
+                    ind_ptr_index++;
+
+                    //does not exit
+                }
+                else
+                {
+
+                    //create indirect pointer
+                    indirect_t *indirect_pointer = malloc(sizeof(indirect_t));
+                    for (ind_ptr_index = 0; ind_ptr_index < NUM_INDIRECT; ind_ptr_index++)
+                    {
+                        indirect_pointer->data_ptr[ind_ptr_index] = -1;
+                    }
+                    n->indirectPointer = get_index();
+                    write_blocks(n->indirectPointer, 1, (void *)indirect_pointer);
+                    ind_ptr_index = 0;
+
+                    //save block
+                    indirect_pointer->data_ptr[ind_ptr_index] = get_index();
+                    write_blocks(n->indirectPointer, 1, (void *)indirect_pointer);
+                    write_blocks(indirect_pointer->data_ptr[ind_ptr_index], 1, (void *)write_buf);
+                    ind_ptr_index++;
+                }
+            }
+
+            length_left -= BLOCK_SIZE;
+        }
+
+        /********** if this is the last block to be written **********/
+        else
+        {
+            //make the block
+            int w;
+            for (w = length - length_left; w < length; w++)
+            {
+                write_buf = appendCharToCharArray(write_buf, buf[w], len_write_buf);
+                len_write_buf++;
+                count++;
+            }
+
+            //write the block
+            //direct pointer
+            if (ptr_index < 12)
+            {
+                n->data_ptrs[ptr_index] = get_index();
+                write_blocks(n->data_ptrs[ptr_index], 1, (void *)write_buf);
+                ptr_index++;
+
+                //indirect pointer
+            }
+            else
+            {
+
+                //exist
+                if (n->indirectPointer != -1)
+                {
+                    indirect_t *indirect_pointer = malloc(sizeof(indirect_t));
+                    read_blocks(n->indirectPointer, 1, (void *)indirect_pointer);
+                    indirect_pointer->data_ptr[ind_ptr_index] = get_index();
+                    write_blocks(n->indirectPointer, 1, (void *)indirect_pointer);
+                    write_blocks(indirect_pointer->data_ptr[ind_ptr_index], 1, (void *)write_buf);
+                    ind_ptr_index++;
+                }
+
+                //does not exist
+                else
+                {
+                    //create indirect pointer
+                    indirect_t *indirect_pointer = malloc(sizeof(indirect_t));
+                    for (ind_ptr_index = 0; ind_ptr_index < NUM_INDIRECT; ind_ptr_index++)
+                    {
+                        indirect_pointer->data_ptr[ind_ptr_index] = -1;
+                    }
+                    n->indirectPointer = get_index();
+                    write_blocks(n->indirectPointer, 1, (void *)indirect_pointer);
+                    ind_ptr_index = 0;
+
+                    //save block
+                    indirect_pointer->data_ptr[ind_ptr_index] = get_index();
+                    write_blocks(n->indirectPointer, 1, (void *)indirect_pointer);
+                    write_blocks(indirect_pointer->data_ptr[ind_ptr_index], 1, (void *)write_buf);
+                    ind_ptr_index++;
+                }
+            }
+        }
+    }
+
+    // update file descriptor
+    f->rwptr += length;
+
+    // update bitmap
+    uint8_t *free_bit_map = get_bitmap();
+    write_blocks(NUM_BLOCKS - 1, 1, (void *)free_bit_map);
+
+    // update inode
+    n->size += length;
+    write_blocks(1, (int)(NUM_INODE_BLOCKS), (void *)inode_table);
+
+    return count;
 }
+
 int sfs_fseek(int fileID, int loc)
 {
+    // error checking
+    if (loc < 0 || loc > MAX_RWPTR)
+    {
+        printf("SFS > Wrong RW location!\n");
+    }
+
+    fd_table[fileID].rwptr = loc;
     return 0;
 }
 int sfs_remove(char *file)
 {
+    // check if it is open
+    int inode = -1;
+    int i;
+    int directory_table_index;
+    for (i = 0; i < NO_OF_INODES; i++)
+    {
+        if (dir_table[i].used == 1)
+        {
+
+            if (strcmp(dir_table[i].name, file) == 0)
+            {
+                inode = dir_table[i].inode_index;
+                directory_table_index = i;
+            }
+        }
+    }
+
+    if (inode == -1)
+    {
+        printf("SFS > File not found!\n");
+        return -1;
+    }
+
+    // free bitmap
+    inode_t *n = &inode_table[inode];
+    int j = 0;
+    while (n->data_ptrs[j] != -1 && j < 12)
+    {
+        rm_index(n->data_ptrs[j]);
+        j++;
+    }
+    j = 0;
+    if (n->indirectPointer != -1)
+    {
+        indirect_t *indirect_pointer = malloc(sizeof(indirect_t));
+        read_blocks(n->indirectPointer, 1, (void *)indirect_pointer);
+        while (indirect_pointer->data_ptr[j] != -1 && j < NUM_INDIRECT)
+        {
+            rm_index(indirect_pointer->data_ptr[j]);
+            j++;
+        }
+    }
+
+    // remove from directory_table
+    dir_table[directory_table_index].used = 0;
+
+    // remove from inode_table
+    inode_table[inode].used = 0;
+
+    // update disk
+    uint8_t *free_bit_map = get_bitmap();
+    write_blocks(NUM_BLOCKS - 1, 1, (void *)free_bit_map);
+    write_blocks(1, sb.inode_table_len, (void *)inode_table);
+    write_blocks(sb.inode_table_len + 1, NUM_DIR_BLOCKS, (void *)dir_table);
+
     return 0;
 }

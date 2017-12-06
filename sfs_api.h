@@ -9,7 +9,11 @@
 #define BLOCK_SIZE 1024
 #define NO_OF_BLOCKS 1024
 #define NO_OF_INODES 100
-
+#define NUM_INDIRECT NO_OF_BLOCKS/sizeof(unsigned int)
+#define MAX_RWPTR ((12*BLOCK_SIZE)+(BLOCK_SIZE/4)*BLOCK_SIZE)
+typedef struct indirect_t{
+unsigned int data_ptr[NUM_INDIRECT];
+}indirect_t;
 typedef struct superblock_t
 {
     uint64_t magic;
@@ -21,6 +25,7 @@ typedef struct superblock_t
 
 typedef struct inode_t
 {
+    int  used;
     unsigned int mode;
     unsigned int link_cnt;
     unsigned int uid;
@@ -45,6 +50,8 @@ typedef struct file_descriptor
 
 typedef struct directory_entry
 {
+    int inode_index;
+    int used;
     int num;                  // represents the inode number of the entery.
     char name[MAX_FILE_NAME]; // represents the name of the entery.
 } directory_entry;
