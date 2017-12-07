@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 #define MAX_FILE_NAME 21 // Last bit for null termination!
-#define MAXFILENAME 21 // Last bit for null termination!
+#define MAXFILENAME 21 // Last bit for null termination! (FOR FUSE)
 
 #define MAX_EXTENSION_NAME 3
 
@@ -12,10 +12,11 @@
 #define NO_OF_BLOCKS 1024
 #define NO_OF_INODES 100
 #define NUM_INDIRECT NO_OF_BLOCKS/sizeof(unsigned int)
-#define MAX_RWPTR ((12*BLOCK_SIZE)+(BLOCK_SIZE/4)*BLOCK_SIZE)
+
 typedef struct indirect_t{
 unsigned int data_ptr[NUM_INDIRECT];
 }indirect_t;
+
 typedef struct superblock_t
 {
     uint64_t magic;
@@ -54,8 +55,8 @@ typedef struct directory_entry
 {
     int inode_index;
     int used;
-    int num;                  // represents the inode number of the entery.
-    char name[MAX_FILE_NAME]; // represents the name of the entery.
+    int num;                  // represents the inode number of the entry.
+    char name[MAX_FILE_NAME]; // represents the name of the entry.
 } directory_entry;
 
 //helper methods
@@ -75,6 +76,5 @@ void init_int();
 void init_super();
 void init_root_dir_inode();
 void init_sfs();
-void init_inode_table();
 
 #endif //_INCLUDE_SFS_API_H_
