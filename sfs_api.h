@@ -10,10 +10,13 @@
 
 #include <stdint.h>
 
+#define PREMALAL_SHAMIL_DISK "sfs_disk.disk"
+
 #define MAX_FILE_NAME 21 // Last bit for null termination!
 #define MAXFILENAME 21 // Last bit for null termination! (FOR FUSE TESTING)
-
 #define MAX_EXTENSION_NAME 3
+#define NUM_BLOCKS 1024                  //maximum number of data blocks on the disk.
+#define BITMAP_ROW_SIZE (NUM_BLOCKS / 8) /* this essentially mimcs the number of rows we have in the bitmap.                                         Will have 128 rows*/
 
 #define BLOCK_SIZE 1024
 #define NO_OF_BLOCKS 1024
@@ -51,7 +54,6 @@ typedef struct inode_t
 typedef struct file_descriptor
 {
     int inodeIndex;
-    inode_t *inode; 
     uint64_t rwptr;
     int used;
 } file_descriptor;
@@ -64,12 +66,21 @@ typedef struct directory_entry
     char name[MAX_FILE_NAME]; // represents the name of the entry.
 } directory_entry;
 
-typedef struct indirect_t{
+typedef struct indirect_block{
 unsigned int data_ptr[NUM_INDIRECT];
-}indirect_t;
+}indirect_block;
 
 //helper methods
+char *AddChar(char *dest, char a, int len);
+inode_t init_inode();
+directory_entry init_dir_entry(char *name, int inode_index);
+void init_fdt();
+void init_int();
+void init_super();
+void init_root_dir_inode();
+void init_sfs();
 
+//Class API 
 void mksfs(int fresh);
 int sfs_getnextfilename(char *fname);
 int sfs_getfilesize(const char *path);
@@ -80,10 +91,5 @@ int sfs_fwrite(int fileID, const char *buf, int length);
 int sfs_fseek(int fileID, int loc);
 int sfs_remove(char *file);
 
-void init_fdt();
-void init_int();
-void init_super();
-void init_root_dir_inode();
-void init_sfs();
 
 #endif //_INCLUDE_SFS_API_H_
