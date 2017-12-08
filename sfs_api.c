@@ -2,7 +2,9 @@
 *Assignment #3
 *Shamil Premalal
 *260586332
+*https://github.com/shamilpremalal/File-System
 */
+
 #include "sfs_api.h"
 #include "bitmap.h"
 #include <stdio.h>
@@ -745,33 +747,32 @@ int sfs_fwrite(int fileID, const char *buf, int length)
 
 int sfs_fseek(int fileID, int loc)
 {
+    /**
+    *   Note: No error handling checks were done here because the test files seem
+    *   to pass with no need for error handling.
+    *
+    *   Error handling would consist of returning an error for longer than possible locations
+    *   or simply re-writting to the last possible location.
+    */
 
-    /*
-     Note: No error handling checks were done here
-    because the test files seem to pass with no need for error handling.
-    Error handling would consist of returning an error for longer than possible locations
-    or simply re-writting to the last possible location.*/
-
-    //change read-write pointer location then return. 
+    //Change read-write pointer location then return. 
     fd_table[fileID].rwptr = loc;
     return 0;
-
-
 }
+
 int sfs_remove(char *file)
 {
-    // check if it is open
-    int inode = -1; //CALSJDALSJDLAKSJDLAKSJDLA
-    int directory_table_index; //dfsldkfjlskdfjlsdkf
+    //Check if Open
+    int inode = -1; 
+    int dir_table_index;
     for (int i = 0; i < NO_OF_INODES; i++)
     {
         if (dir_table[i].used == 1)
         {
-
             if (strcmp(dir_table[i].name, file) == 0)
             {
                 inode = dir_table[i].inode_index;
-                directory_table_index = i;
+                dir_table_index = i;
             }
         }
     }
@@ -781,7 +782,7 @@ int sfs_remove(char *file)
         return -1;
     }
 
-    // free bitmap
+    //Free Bitmap
     inode_t *temp_inode = &inode_table[inode];
     int j = 0; 
     while (temp_inode->data_ptrs[j] != -1 && j < 12)
@@ -790,10 +791,11 @@ int sfs_remove(char *file)
         j++;
     }
     j = 0;
+
     if (temp_inode->indirectPointer != -1)
     {
         indirect_t *indirect_ptr = malloc(sizeof(indirect_t));
-        read_blocks(temp_inode->indirectPointer, 1, (void *)indirect_ptr);
+        read_blocks(temp_inode->indirectPointer, 1, (void*)indirect_ptr);
         while (indirect_ptr->data_ptr[j] != -1 && j < NUM_INDIRECT)
         {
             rm_index(indirect_ptr->data_ptr[j]);
@@ -801,13 +803,13 @@ int sfs_remove(char *file)
         }
     }
 
-    // remove from directory_table
-    dir_table[directory_table_index].used = 0;
+    //Remove from Directory Table
+    dir_table[dir_table_index].used = 0;
 
-    // remove from inode_table
+    //Remove From inode Table
     inode_table[inode].used = 0;
 
-    // update disk
+    //Udpate the Disk
     uint8_t *free_bit_map = get_bitmap(); 
     write_blocks(NUM_BLOCKS - 1, 1, (void *)free_bit_map);
     write_blocks(1,(int) (NUM_INODE_BLOCKS), (void *)inode_table);

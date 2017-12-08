@@ -1,10 +1,17 @@
+/*ECSE 427
+*Assignment #3
+*Shamil Premalal
+*260586332
+*https://github.com/shamilpremalal/File-System
+*/
+
 #ifndef _INCLUDE_SFS_API_H_
 #define _INCLUDE_SFS_API_H_
 
 #include <stdint.h>
 
 #define MAX_FILE_NAME 21 // Last bit for null termination!
-#define MAXFILENAME 21 // Last bit for null termination! (FOR FUSE)
+#define MAXFILENAME 21 // Last bit for null termination! (FOR FUSE TESTING)
 
 #define MAX_EXTENSION_NAME 3
 
@@ -13,9 +20,6 @@
 #define NO_OF_INODES 100
 #define NUM_INDIRECT NO_OF_BLOCKS/sizeof(unsigned int)
 
-typedef struct indirect_t{
-unsigned int data_ptr[NUM_INDIRECT];
-}indirect_t;
 
 typedef struct superblock_t
 {
@@ -40,8 +44,9 @@ typedef struct inode_t
 
 /*
  * inodeIndex    which inode this entry describes
- * inode  pointer towards the inode in the inode table
- * rwptr    where in the file to start   
+ * inode pointer towards the inode in the inode table
+ * rwptr where in the file to start   
+ * used when used or not
  */
 typedef struct file_descriptor
 {
@@ -58,6 +63,10 @@ typedef struct directory_entry
     int num;                  // represents the inode number of the entry.
     char name[MAX_FILE_NAME]; // represents the name of the entry.
 } directory_entry;
+
+typedef struct indirect_t{
+unsigned int data_ptr[NUM_INDIRECT];
+}indirect_t;
 
 //helper methods
 
